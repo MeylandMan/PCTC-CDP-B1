@@ -1,0 +1,32 @@
+Options -Indexes
+
+# Empêche l'accès direct aux fichiers PHP hors du dossier public/
+# (les fichiers core/, app/, config/ ne doivent jamais être accessibles via HTTP)
+
+RewriteEngine On
+
+# Autoriser les fichiers et dossiers existants dans public/ (assets, images…)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Tout le reste passe par index.php
+RewriteRule ^ index.php [QSA,L]
+
+# ---------------------------------------------------------------------------
+# Sécurité supplémentaire
+# ---------------------------------------------------------------------------
+
+# Désactive la signature du serveur Apache
+ServerSignature Off
+
+# Protection contre le clickjacking
+Header always set X-Frame-Options "SAMEORIGIN"
+
+# Protection XSS pour les navigateurs anciens
+Header always set X-XSS-Protection "1; mode=block"
+
+# Empêche le navigateur de deviner le type MIME
+Header always set X-Content-Type-Options "nosniff"
+
+# Referrer policy
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
