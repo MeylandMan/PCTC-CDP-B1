@@ -1,6 +1,6 @@
 CREATE DATABASE IF NOT EXISTS monitoring_project;
 USE monitoring_project;
-
+-- roles
 CREATE TABLE IF NOT EXISTS roles
 (
     id          INT          PRIMARY KEY AUTO_INCREMENT,
