@@ -1,7 +1,7 @@
 <?php
 
-require_once ROOT_PATH . '/core/Controller.php';
-require_once ROOT_PATH . '/app/models/UserModel.php';
+require_once ROOT_PATH . '/core/controller.php';
+require_once ROOT_PATH . '/app/models/user-model.php';
 
 // PHPMailer — à installer via Composer ou en téléchargeant les sources
 // require_once ROOT_PATH . '/vendor/autoload.php';

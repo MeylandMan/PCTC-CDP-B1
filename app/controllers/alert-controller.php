@@ -1,7 +1,7 @@
 <?php
 
 require_once ROOT_PATH . '/core/controller.php';
-require_once ROOT_PATH . '/app/models/alert-controller.php';
+require_once ROOT_PATH . '/app/models/alert-model.php';
 
 class AlertController extends Controller
 {
