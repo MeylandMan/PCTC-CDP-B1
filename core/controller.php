@@ -61,6 +61,11 @@ abstract class Controller
 
     protected function redirect(string $url): void
     {
+        // Si l'URL est relative (commence par /), on préfixe avec BASE_URL
+        // pour que la redirection fonctionne dans un sous-dossier (ex: /cisco-pk)
+        if (str_starts_with($url, '/') && defined('BASE_URL')) {
+            $url = rtrim(BASE_URL, '/') . $url;
+        }
         header("Location: {$url}");
         exit;
     }

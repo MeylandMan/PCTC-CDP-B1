@@ -1,9 +1,11 @@
 Options -Indexes
 RewriteEngine On
 
-# Si la requête pointe déjà vers un fichier ou dossier réel dans public/, on laisse passer
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+# Redirige la racine / vers public/index.php directement
+RewriteRule ^$ public/index.php [QSA,L]
 
-# Redirige tout vers public/index.php en préservant la query string
+# Redirige tout le reste vers public/index.php
+# sans les conditions !-f et !-d qui bloquaient la réécriture
+# quand le dossier racine lui-même était demandé
+RewriteCond %{REQUEST_URI} !^/cisco-pk/public/
 RewriteRule ^(.*)$ public/index.php [QSA,L]
