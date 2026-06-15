@@ -149,6 +149,17 @@ class Router
     // Appel du controller
     // -----------------------------------------------------------------------
 
+    /**
+     * Convertit le nom PascalCase du controller en nom de fichier kebab-case.
+     *
+     * Exemples :
+     *   HomeController     → home-controller.php
+     *   AuthController     → auth-controller.php
+     *   DashboardController→ dashboard-controller.php
+     *
+     * Cela permet de nommer les fichiers en kebab-case (convention Unix)
+     * tout en utilisant PascalCase dans le code PHP.
+     */
     private function controllerToFilename(string $controllerName): string
     {
         // "HomeController" → "home-controller"

@@ -1,3 +1,9 @@
+Options -Indexes
 RewriteEngine On
-RewriteRule ^$ public/ [L]
-RewriteRule ^(.+)$ public/$1 [L]
+
+# Si la requête pointe déjà vers un fichier ou dossier réel dans public/, on laisse passer
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirige tout vers public/index.php en préservant la query string
+RewriteRule ^(.*)$ public/index.php [QSA,L]
