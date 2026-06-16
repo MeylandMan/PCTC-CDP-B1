@@ -31,6 +31,16 @@
         .sidebar-brand {
             background-color: var(--nexora-sidebar-bg);
             border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-brand .brand-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
         }
 
         .brand-text {
@@ -567,6 +577,9 @@
 <!-- /.app-wrapper -->
 
 
+<!-- Bootstrap 5 JS (Popper + dropdowns) — requis car AdminLTE n'embarque pas ce JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- AdminLTE v4 JS (toggle sidebar, treeview…) -->
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/js/adminlte.min.js"></script>
 
 <script>
