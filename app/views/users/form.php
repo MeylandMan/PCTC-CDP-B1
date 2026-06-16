@@ -1,3 +1,9 @@
+<?php
+$isEdit = $user !== null;
+$action = $isEdit ? url('/users/' . $user['id'] . '/update') : url('/users/store');
+$val    = fn(string $k, mixed $d = '') => e($user[$k] ?? $d);
+?>
+
 <div class="row justify-content-center">
 <div class="col-12 col-xl-7">
 <div class="card">

@@ -165,35 +165,37 @@
 <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
 
 <script>
-const csrf       = document.querySelector('meta[name="csrf-token"]').content;
-const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+document.addEventListener('DOMContentLoaded', function () {
+    const csrf       = document.querySelector('meta[name="csrf-token"]').content;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-function confirmDelete(id, name) {
-    document.getElementById('deleteUserName').textContent = name;
-    document.getElementById('confirmDeleteBtn').onclick = () => {
-        const form = document.getElementById('deleteForm');
-        form.action = '<?= url('/users/') ?>' + id + '/delete';
-        form.submit();
+    window.confirmDelete = function (id, name) {
+        document.getElementById('deleteUserName').textContent = name;
+        document.getElementById('confirmDeleteBtn').onclick = () => {
+            const form = document.getElementById('deleteForm');
+            form.action = '<?= url('/users/') ?>' + id + '/delete';
+            form.submit();
+        };
+        deleteModal.show();
     };
-    deleteModal.show();
-}
 
-function toggleActive(id, checkbox) {
-    fetch('<?= url('/users/') ?>' + id + '/toggle-active', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: '_csrf_token=' + encodeURIComponent(csrf),
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (!data.success) {
-            checkbox.checked = !checkbox.checked; // annule le toggle visuel
-            alert(data.message);
-        }
-    })
-    .catch(() => { checkbox.checked = !checkbox.checked; });
-}
+    window.toggleActive = function (id, checkbox) {
+        fetch('<?= url('/users/') ?>' + id + '/toggle-active', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: '_csrf_token=' + encodeURIComponent(csrf),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                checkbox.checked = !checkbox.checked; // annule le toggle visuel
+                alert(data.message);
+            }
+        })
+        .catch(() => { checkbox.checked = !checkbox.checked; });
+    };
+});
 </script>
