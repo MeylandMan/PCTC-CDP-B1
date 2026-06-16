@@ -21,11 +21,24 @@ class UserController extends Controller
         $search    = (string) $this->query('search', '');
         $paginator = $this->users->allWithRole($page, 15, $search);
 
+        $actorId       = (int) $this->currentUser()['id'];
+        $isSuperAdmin  = $this->hasRole('super_admin');
+
+        // Calcule, pour chaque ligne du tableau, si l'utilisateur connecté
+        // a le droit d'agir sur cette personne. Évite de recalculer
+        // canActOn() à répétition dans la vue (et évite d'exposer
+        // la logique de hiérarchie dans le template).
+        foreach ($paginator['data'] as &$row) {
+            $row['can_act'] = $isSuperAdmin || $this->users->canActOn($actorId, (int) $row['id']);
+        }
+        unset($row);
+
         $this->view('users/index', [
             'title'         => 'Utilisateurs',
             'breadcrumbs'   => ['Utilisateurs' => null],
             'paginator'     => $paginator,
             'search'        => $search,
+            'currentUserId' => $actorId,
             'alertCount'    => 0,
             'incidentCount' => 0,
         ]);
@@ -39,10 +52,15 @@ class UserController extends Controller
         $user = $this->users->findWithRole((int) $id);
         if (!$user) $this->abort(404, 'Utilisateur introuvable.');
 
+        $actorId  = (int) $this->currentUser()['id'];
+        $canAct   = $this->hasRole('super_admin')
+                 || $this->users->canActOn($actorId, (int) $id);
+
         $this->view('users/show', [
             'title'         => e($user['firstname'] . ' ' . $user['lastname']),
             'breadcrumbs'   => ['Utilisateurs' => '/users', $user['firstname'] => null],
             'user'          => $user,
+            'canAct'        => $canAct,
             'alertCount'    => 0,
             'incidentCount' => 0,
         ]);
@@ -101,6 +119,18 @@ class UserController extends Controller
         $user = $this->users->findWithRole((int) $id);
         if (!$user) $this->abort(404, 'Utilisateur introuvable.');
 
+        $actorId = (int) $this->currentUser()['id'];
+
+        // Un super_admin peut tout faire (y compris s'éditer lui-même).
+        // Un admin ne peut éditer que des comptes de rang strictement
+        // inférieur (technicien, utilisateur, auditeur) — jamais un autre
+        // admin ni un super_admin.
+        if (!$this->hasRole('super_admin') && !$this->users->canActOn($actorId, (int) $id)) {
+            $this->flash('error', 'Vous n\'avez pas les droits pour modifier ce compte.');
+            $this->redirect('/users');
+            return;
+        }
+
         $this->view('users/form', [
             'title'         => 'Modifier — ' . e($user['firstname']),
             'breadcrumbs'   => ['Utilisateurs' => '/users', 'Modifier' => null],
@@ -119,6 +149,17 @@ class UserController extends Controller
 
         $user = $this->users->findById((int) $id);
         if (!$user) $this->abort(404, 'Utilisateur introuvable.');
+
+        $actorId = (int) $this->currentUser()['id'];
+
+        // Vérification côté serveur indépendante de edit() : empêche
+        // un POST direct vers /users/:id/update qui contournerait le
+        // contrôle fait sur la page d'édition.
+        if (!$this->hasRole('super_admin') && !$this->users->canActOn($actorId, (int) $id)) {
+            $this->flash('error', 'Vous n\'avez pas les droits pour modifier ce compte.');
+            $this->redirect('/users');
+            return;
+        }
 
         $errors = $this->validateUser((int) $id);
         if (!empty($errors)) {
@@ -158,9 +199,20 @@ class UserController extends Controller
         $this->requireRole(['super_admin', 'admin']);
         $this->verifyCsrfToken();
 
+        $actorId = (int) $this->currentUser()['id'];
+
         // Empêche la suppression de soi-même
-        if ((int) $id === (int) $this->currentUser()['id']) {
+        if ((int) $id === $actorId) {
             $this->flash('error', 'Vous ne pouvez pas supprimer votre propre compte.');
+            $this->redirect('/users');
+            return;
+        }
+
+        // Un admin ne peut supprimer que des comptes de rang strictement
+        // inférieur. Un super_admin peut supprimer n'importe qui (sauf lui-même,
+        // déjà bloqué ci-dessus).
+        if (!$this->hasRole('super_admin') && !$this->users->canActOn($actorId, (int) $id)) {
+            $this->flash('error', 'Vous n\'avez pas les droits pour supprimer ce compte.');
             $this->redirect('/users');
             return;
         }
@@ -177,8 +229,18 @@ class UserController extends Controller
         $this->requirePermission('manage_users');
         $this->verifyCsrfToken();
 
-        if ((int) $id === (int) $this->currentUser()['id']) {
+        $actorId = (int) $this->currentUser()['id'];
+
+        if ((int) $id === $actorId) {
             $this->json(['success' => false, 'message' => 'Impossible de désactiver votre propre compte.']);
+            return;
+        }
+
+        // Un admin ne peut activer/désactiver que des comptes de rang
+        // strictement inférieur. Bloque toute tentative sur un pair ou
+        // un super_admin, y compris via un appel AJAX direct.
+        if (!$this->hasRole('super_admin') && !$this->users->canActOn($actorId, (int) $id)) {
+            $this->json(['success' => false, 'message' => 'Vous n\'avez pas les droits pour modifier ce compte.']);
             return;
         }
 

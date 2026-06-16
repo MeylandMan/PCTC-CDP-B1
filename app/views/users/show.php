@@ -1,3 +1,10 @@
+<?php
+/**
+ * Vue : Détail utilisateur
+ * Variable : $user (avec role_name)
+ */
+?>
+
 <div class="row justify-content-center">
 <div class="col-12 col-xl-7">
 
@@ -8,10 +15,12 @@
             <?= e($user['firstname'] . ' ' . $user['lastname']) ?>
         </h6>
         <div class="d-flex gap-2">
+            <?php if ($canAct): ?>
             <a href="<?= url('/users/' . $user['id'] . '/edit') ?>"
                class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-pencil me-1"></i>Modifier
             </a>
+            <?php endif; ?>
             <a href="<?= url('/users') ?>" class="btn btn-sm btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Retour
             </a>
@@ -56,7 +65,7 @@
     </div>
 
     <!-- Danger zone -->
-    <?php if ($user['id'] !== ($_SESSION['user']['id'] ?? 0)): ?>
+    <?php if ($user['id'] !== ($_SESSION['user']['id'] ?? 0) && $canAct): ?>
     <div class="card-footer d-flex gap-2">
         <form method="POST"
               action="<?= url('/users/' . $user['id'] . '/delete') ?>"

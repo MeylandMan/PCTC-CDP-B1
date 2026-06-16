@@ -92,11 +92,11 @@
                         </td>
                         <td>
                             <div class="form-check form-switch mb-0"
-                                 title="<?= $u['is_active'] ? 'Actif — cliquer pour désactiver' : 'Inactif — cliquer pour activer' ?>">
+                                 title="<?= !$u['can_act'] ? 'Vous n\'avez pas les droits sur ce compte' : ($u['is_active'] ? 'Actif — cliquer pour désactiver' : 'Inactif — cliquer pour activer') ?>">
                                 <input class="form-check-input" type="checkbox"
                                        <?= $u['is_active'] ? 'checked' : '' ?>
                                        onchange="toggleActive(<?= $u['id'] ?>, this)"
-                                       <?= $u['id'] === ($currentUser['id'] ?? 0) ? 'disabled' : '' ?>>
+                                       <?= ($u['id'] === $currentUserId || !$u['can_act']) ? 'disabled' : '' ?>>
                             </div>
                         </td>
                         <td class="small text-muted">
@@ -108,11 +108,13 @@
                                    class="btn btn-sm btn-outline-primary py-0 px-2" title="Voir">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                <?php if ($u['can_act']): ?>
                                 <a href="<?= url('/users/' . $u['id'] . '/edit') ?>"
                                    class="btn btn-sm btn-outline-secondary py-0 px-2" title="Modifier">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <?php if ($u['id'] !== ($currentUser['id'] ?? 0)): ?>
+                                <?php endif; ?>
+                                <?php if ($u['id'] !== $currentUserId && $u['can_act']): ?>
                                 <button class="btn btn-sm btn-outline-danger py-0 px-2"
                                         title="Supprimer"
                                         onclick="confirmDelete(<?= $u['id'] ?>, '<?= e(addslashes($u['firstname'] . ' ' . $u['lastname'])) ?>')">

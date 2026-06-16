@@ -264,4 +264,62 @@ class UserModel extends Model
         );
     }
 
+    // -----------------------------------------------------------------------
+    // Hiérarchie des rôles — empêche un admin d'agir sur un autre admin
+    // ou un super_admin, et un super_admin d'agir sur lui-même (delete).
+    // -----------------------------------------------------------------------
+
+    /**
+     * Rang numérique de chaque rôle. Plus le chiffre est élevé,
+     * plus le rôle est privilégié. Un utilisateur ne peut agir que sur
+     * des comptes de rang STRICTEMENT inférieur au sien (sauf lui-même).
+     */
+    private const ROLE_RANK = [
+        'auditeur'     => 1,
+        'utilisateur'  => 1,
+        'technicien'   => 2,
+        'admin'        => 3,
+        'super_admin'  => 4,
+    ];
+
+    /**
+     * Retourne le rang du rôle d'un utilisateur donné par son ID.
+     * Retourne 0 si l'utilisateur ou son rôle est introuvable.
+     */
+    public function roleRank(int $userId): int
+    {
+        $row = $this->queryOne(
+            'SELECT r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE u.id = :id',
+            [':id' => $userId]
+        );
+
+        if (!$row) {
+            return 0;
+        }
+
+        return self::ROLE_RANK[$row['role_name']] ?? 0;
+    }
+
+    /**
+     * Vérifie si $actorId a le droit d'agir (modifier/désactiver/supprimer)
+     * sur $targetId. Un utilisateur ne peut agir que sur un compte de rang
+     * strictement inférieur au sien. Agir sur soi-même est toujours refusé
+     * par cette méthode — les controllers gèrent ce cas séparément
+     * (ex: "vous ne pouvez pas vous supprimer vous-même").
+     *
+     * Exemple : un admin (rang 3) peut agir sur un technicien (rang 2)
+     * mais pas sur un autre admin (rang 3) ni sur un super_admin (rang 4).
+     */
+    public function canActOn(int $actorId, int $targetId): bool
+    {
+        if ($actorId === $targetId) {
+            return false;
+        }
+
+        return $this->roleRank($actorId) > $this->roleRank($targetId);
+    }
+
 }
