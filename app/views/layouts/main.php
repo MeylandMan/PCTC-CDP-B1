@@ -225,7 +225,7 @@
 
                     <!-- Appareils -->
                     <li class="nav-item <?= active('/devices') ? 'menu-open' : '' ?>">
-                        <a href="<?= url('/devices') ?>"
+                        <a href="#"
                            class="nav-link <?= active('/devices') ?>">
                             <i class="bi bi-hdd-network"></i>
                             <p>
