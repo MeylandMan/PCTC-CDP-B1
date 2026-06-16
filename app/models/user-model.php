@@ -1,6 +1,6 @@
 <?php
 
-require_once ROOT_PATH . '/core/Model.php';
+require_once ROOT_PATH . '/core/model.php';
 
 class UserModel extends Model
 {
@@ -150,30 +150,6 @@ class UserModel extends Model
     // Gestion des utilisateurs (CRUD admin)
     // -----------------------------------------------------------------------
 
-    public function allWithRole(int $page = 1, int $perPage = 15): array
-    {
-        $offset = ($page - 1) * $perPage;
-
-        $data = $this->query(
-            'SELECT u.id, u.firstname, u.lastname, u.email, u.phone,
-                    u.is_active, u.last_login, u.created_at, r.role_name
-             FROM users u
-             JOIN roles r ON r.id = u.role_id
-             ORDER BY u.created_at DESC
-             LIMIT :limit OFFSET :offset',
-            [':limit' => $perPage, ':offset' => $offset]
-        );
-
-        $total = $this->count();
-
-        return [
-            'data'        => $data,
-            'total'       => $total,
-            'perPage'     => $perPage,
-            'currentPage' => $page,
-            'lastPage'    => (int) ceil($total / $perPage),
-        ];
-    }
 
     public function createUser(array $data): int
     {
@@ -202,4 +178,90 @@ class UserModel extends Model
             [':id' => $userId]
         );
     }
+
+    // Méthodes ajoutées pour UserController
+
+    /**
+     * Trouve un utilisateur avec son rôle.
+     */
+    public function findWithRole(int $id): array|false
+    {
+        return $this->queryOne(
+            'SELECT u.*, r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE u.id = :id',
+            [':id' => $id]
+        );
+    }
+
+    /**
+     * Liste paginée avec rôle + filtre recherche.
+     */
+    public function allWithRole(int $page = 1, int $perPage = 15, string $search = ''): array
+    {
+        $where    = '1 = 1';
+        $bindings = [];
+
+        if ($search !== '') {
+            $where              = '(u.firstname LIKE :s OR u.lastname LIKE :s OR u.email LIKE :s)';
+            $bindings[':s']     = '%' . $search . '%';
+        }
+
+        $offset = ($page - 1) * $perPage;
+
+        $data = $this->query(
+            "SELECT u.id, u.firstname, u.lastname, u.email, u.phone,
+                    u.is_active, u.last_login, u.created_at, r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE {$where}
+             ORDER BY u.created_at DESC
+             LIMIT :limit OFFSET :offset",
+            array_merge($bindings, [':limit' => $perPage, ':offset' => $offset])
+        );
+
+        $total = (int) $this->queryOne(
+            "SELECT COUNT(*) AS n FROM users u WHERE {$where}",
+            $bindings
+        )['n'];
+
+        return [
+            'data'        => $data,
+            'total'       => $total,
+            'perPage'     => $perPage,
+            'currentPage' => $page,
+            'lastPage'    => max(1, (int) ceil($total / $perPage)),
+        ];
+    }
+
+    /**
+     * Retourne tous les rôles pour le <select>.
+     */
+    public function allRoles(): array
+    {
+        return $this->query('SELECT id, role_name, description FROM roles ORDER BY id');
+    }
+
+    /**
+     * Met à jour le profil (sans mot de passe).
+     */
+    public function updateProfile(int $userId, array $data): void
+    {
+        $this->execute(
+            'UPDATE users
+             SET firstname = :firstname, lastname = :lastname, email = :email,
+                 phone = :phone, role_id = :role_id, updated_at = NOW()
+             WHERE id = :id',
+            [
+                ':firstname' => $data['firstname'],
+                ':lastname'  => $data['lastname'],
+                ':email'     => $data['email'],
+                ':phone'     => $data['phone'] ?? null,
+                ':role_id'   => $data['role_id'],
+                ':id'        => $userId,
+            ]
+        );
+    }
+
 }
