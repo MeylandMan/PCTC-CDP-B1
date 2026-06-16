@@ -418,7 +418,7 @@
      SCRIPTS CHART.JS + RAFRAÎCHISSEMENT AJAX
 ====================================================================== -->
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     'use strict';
 
     // ------------------------------------------------------------------
@@ -561,5 +561,5 @@
 
     setInterval(refreshStats, 30_000);
 
-})();
+});
 </script>
