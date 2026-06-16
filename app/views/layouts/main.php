@@ -453,7 +453,7 @@
                         ?>
 
                         <?php if ($avatar): ?>
-                            <img src="<?= e($avatar) ?>" alt="avatar" class="user-avatar">
+                            <img src="<?= url($avatar) ?>" alt="avatar" class="user-avatar">
                         <?php else: ?>
                             <div class="user-avatar"><?= e($initials) ?></div>
                         <?php endif; ?>
