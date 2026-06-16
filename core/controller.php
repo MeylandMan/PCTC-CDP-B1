@@ -270,8 +270,14 @@ abstract class Controller
             $this->abort(403, 'Token CSRF invalide. Veuillez recharger la page et réessayer.');
         }
 
-        // Régénère le token après validation (rotation)
-        unset($_SESSION['csrf_token']);
+        // NOTE : le token n'est PAS régénéré ici (pas de rotation à usage unique).
+        // Il reste valide pour toute la durée de la session, ce qui est nécessaire
+        // pour les pages qui font plusieurs requêtes AJAX successives (toggle,
+        // changement de statut, etc.) sans recharger la page. La rotation à
+        // chaque vérification cassait ces appels après la première requête :
+        // le jeton JS en mémoire devenait obsolète dès la 2e tentative.
+        // La protection reste effective car le cookie de session est
+        // HttpOnly + SameSite=Strict (voir public/index.php).
     }
 
     // ---------------------------------------------------------------------------
