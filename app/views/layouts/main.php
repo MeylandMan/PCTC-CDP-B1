@@ -361,25 +361,6 @@
                         </a>
                     </li>
                     <?php endif; ?>
-
-                    <!-- ---- COMPTE ---- -->
-                    <li class="nav-header">Compte</li>
-
-                    <li class="nav-item">
-                        <a href="<?= url('/profile') ?>"
-                           class="nav-link <?= active('/profile') ?>">
-                            <i class="bi bi-person-circle"></i>
-                            <p>Mon profil</p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="<?= url('/auth/logout') ?>" class="nav-link text-danger">
-                            <i class="bi bi-box-arrow-right"></i>
-                            <p>Déconnexion</p>
-                        </a>
-                    </li>
-
                 </ul>
             </nav>
         </div>
