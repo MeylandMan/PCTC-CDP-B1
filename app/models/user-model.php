@@ -322,4 +322,32 @@ class UserModel extends Model
         return $this->roleRank($actorId) > $this->roleRank($targetId);
     }
 
+    /**
+     * Rang numérique d'un rôle à partir de son nom directement
+     * (utile quand on a déjà le role_name en session, sans requête).
+     */
+    public function roleRankByName(string $roleName): int
+    {
+        return self::ROLE_RANK[$roleName] ?? 0;
+    }
+
+    /**
+     * Retourne uniquement les rôles qu'un acteur a le droit d'attribuer
+     * à un autre compte (création ou changement de rôle).
+     *
+     * Règle : un acteur ne peut attribuer que des rôles de rang
+     * STRICTEMENT inférieur au sien. Un admin (rang 3) ne peut donc
+     * jamais attribuer 'admin' ou 'super_admin' — uniquement technicien,
+     * utilisateur ou auditeur. Un super_admin peut attribuer tous les rôles.
+     */
+    public function assignableRoles(int $actorRoleRank): array
+    {
+        $all = $this->allRoles();
+
+        return array_values(array_filter(
+            $all,
+            fn($role) => $this->roleRankByName($role['role_name']) < $actorRoleRank
+        ));
+    }
+
 }

@@ -71,7 +71,12 @@ class UserController extends Controller
     {
         $this->requirePermission('manage_users');
 
-        $roles = $this->users->allRoles();
+        // Filtre les rôles proposés selon le rang de l'acteur — un admin
+        // ne doit jamais voir 'admin' ou 'super_admin' dans la liste,
+        // sinon il pourrait créer un compte plus privilégié que lui
+        // (ou aussi privilégié), ce qui est une faille d'escalade de privilèges.
+        $actorRoleRank = $this->users->roleRankByName($this->currentUser()['role_name']);
+        $roles         = $this->users->assignableRoles($actorRoleRank);
 
         $this->view('users/form', [
             'title'         => 'Ajouter un utilisateur',
@@ -131,11 +136,19 @@ class UserController extends Controller
             return;
         }
 
+        // Filtre les rôles proposés de la même façon qu'à la création :
+        // un admin ne doit jamais pouvoir promouvoir quelqu'un vers
+        // admin ou super_admin via le formulaire d'édition.
+        $actorRoleRank = $this->users->roleRankByName($this->currentUser()['role_name']);
+        $roles         = $this->hasRole('super_admin')
+            ? $this->users->allRoles()
+            : $this->users->assignableRoles($actorRoleRank);
+
         $this->view('users/form', [
             'title'         => 'Modifier — ' . e($user['firstname']),
             'breadcrumbs'   => ['Utilisateurs' => '/users', 'Modifier' => null],
             'user'          => $user,
-            'roles'         => $this->users->allRoles(),
+            'roles'         => $roles,
             'alertCount'    => 0,
             'incidentCount' => 0,
         ]);
@@ -282,6 +295,38 @@ class UserController extends Controller
             $errors[] = 'Le mot de passe est obligatoire.';
         }
 
+        // -------------------------------------------------------------------
+        // Empêche l'escalade de privilèges : un admin ne peut pas attribuer
+        // un rôle 'admin' ou 'super_admin', même via une requête POST forgée
+        // qui contournerait le <select> filtré côté vue. C'est la vraie
+        // barrière de sécurité — le filtre dans create()/edit() n'est qu'une
+        // aide visuelle, cette vérification serveur est ce qui compte vraiment.
+        $roleId = (int) $this->input('role_id');
+        if ($roleId > 0 && !$this->hasRole('super_admin')) {
+            $targetRoleRank = $this->roleRankOfRoleId($roleId);
+            $actorRoleRank  = $this->users->roleRankByName($this->currentUser()['role_name']);
+
+            if ($targetRoleRank >= $actorRoleRank) {
+                $errors[] = 'Vous n\'avez pas le droit d\'attribuer ce rôle.';
+            }
+        }
+
         return $errors;
+    }
+
+    /**
+     * Rang du rôle correspondant à un role_id (et non un user_id).
+     * roleRank() dans UserModel prend un user_id ; ici on a besoin
+     * du rang directement depuis l'ID du rôle choisi dans le formulaire.
+     */
+    private function roleRankOfRoleId(int $roleId): int
+    {
+        $roles = $this->users->allRoles();
+        foreach ($roles as $role) {
+            if ((int) $role['id'] === $roleId) {
+                return $this->users->roleRankByName($role['role_name']);
+            }
+        }
+        return 0;
     }
 }
