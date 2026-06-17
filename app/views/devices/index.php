@@ -188,15 +188,17 @@
 </div>
 
 <script>
-const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-function confirmDelete(id, name) {
-    document.getElementById('deleteDeviceName').textContent = name;
-    document.getElementById('confirmDeleteBtn').onclick = function () {
-        const form = document.getElementById('deleteForm');
-        form.action = '<?= url('/devices/') ?>' + id + '/delete';
-        form.submit();
+    window.confirmDelete = function (id, name) {
+        document.getElementById('deleteDeviceName').textContent = name;
+        document.getElementById('confirmDeleteBtn').onclick = function () {
+            const form = document.getElementById('deleteForm');
+            form.action = '<?= url('/devices/') ?>' + id + '/delete';
+            form.submit();
+        };
+        deleteModal.show();
     };
-    deleteModal.show();
-}
+});
 </script>

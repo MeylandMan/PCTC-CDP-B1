@@ -1,6 +1,6 @@
 <?php
 
-require_once ROOT_PATH . '/core/Model.php';
+require_once ROOT_PATH . '/core/model.php';
 
 class UserModel extends Model
 {
@@ -150,30 +150,6 @@ class UserModel extends Model
     // Gestion des utilisateurs (CRUD admin)
     // -----------------------------------------------------------------------
 
-    public function allWithRole(int $page = 1, int $perPage = 15): array
-    {
-        $offset = ($page - 1) * $perPage;
-
-        $data = $this->query(
-            'SELECT u.id, u.firstname, u.lastname, u.email, u.phone,
-                    u.is_active, u.last_login, u.created_at, r.role_name
-             FROM users u
-             JOIN roles r ON r.id = u.role_id
-             ORDER BY u.created_at DESC
-             LIMIT :limit OFFSET :offset',
-            [':limit' => $perPage, ':offset' => $offset]
-        );
-
-        $total = $this->count();
-
-        return [
-            'data'        => $data,
-            'total'       => $total,
-            'perPage'     => $perPage,
-            'currentPage' => $page,
-            'lastPage'    => (int) ceil($total / $perPage),
-        ];
-    }
 
     public function createUser(array $data): int
     {
@@ -202,4 +178,176 @@ class UserModel extends Model
             [':id' => $userId]
         );
     }
+
+    // Méthodes ajoutées pour UserController
+
+    /**
+     * Trouve un utilisateur avec son rôle.
+     */
+    public function findWithRole(int $id): array|false
+    {
+        return $this->queryOne(
+            'SELECT u.*, r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE u.id = :id',
+            [':id' => $id]
+        );
+    }
+
+    /**
+     * Liste paginée avec rôle + filtre recherche.
+     */
+    public function allWithRole(int $page = 1, int $perPage = 15, string $search = ''): array
+    {
+        $where    = '1 = 1';
+        $bindings = [];
+
+        if ($search !== '') {
+            $where              = '(u.firstname LIKE :s OR u.lastname LIKE :s OR u.email LIKE :s)';
+            $bindings[':s']     = '%' . $search . '%';
+        }
+
+        $offset = ($page - 1) * $perPage;
+
+        $data = $this->query(
+            "SELECT u.id, u.firstname, u.lastname, u.email, u.phone,
+                    u.is_active, u.last_login, u.created_at, r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE {$where}
+             ORDER BY u.created_at DESC
+             LIMIT :limit OFFSET :offset",
+            array_merge($bindings, [':limit' => $perPage, ':offset' => $offset])
+        );
+
+        $total = (int) $this->queryOne(
+            "SELECT COUNT(*) AS n FROM users u WHERE {$where}",
+            $bindings
+        )['n'];
+
+        return [
+            'data'        => $data,
+            'total'       => $total,
+            'perPage'     => $perPage,
+            'currentPage' => $page,
+            'lastPage'    => max(1, (int) ceil($total / $perPage)),
+        ];
+    }
+
+    /**
+     * Retourne tous les rôles pour le <select>.
+     */
+    public function allRoles(): array
+    {
+        return $this->query('SELECT id, role_name, description FROM roles ORDER BY id');
+    }
+
+    /**
+     * Met à jour le profil (sans mot de passe).
+     */
+    public function updateProfile(int $userId, array $data): void
+    {
+        $this->execute(
+            'UPDATE users
+             SET firstname = :firstname, lastname = :lastname, email = :email,
+                 phone = :phone, role_id = :role_id, updated_at = NOW()
+             WHERE id = :id',
+            [
+                ':firstname' => $data['firstname'],
+                ':lastname'  => $data['lastname'],
+                ':email'     => $data['email'],
+                ':phone'     => $data['phone'] ?? null,
+                ':role_id'   => $data['role_id'],
+                ':id'        => $userId,
+            ]
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Hiérarchie des rôles — empêche un admin d'agir sur un autre admin
+    // ou un super_admin, et un super_admin d'agir sur lui-même (delete).
+    // -----------------------------------------------------------------------
+
+    /**
+     * Rang numérique de chaque rôle. Plus le chiffre est élevé,
+     * plus le rôle est privilégié. Un utilisateur ne peut agir que sur
+     * des comptes de rang STRICTEMENT inférieur au sien (sauf lui-même).
+     */
+    private const ROLE_RANK = [
+        'auditeur'     => 1,
+        'utilisateur'  => 1,
+        'technicien'   => 2,
+        'admin'        => 3,
+        'super_admin'  => 4,
+    ];
+
+    /**
+     * Retourne le rang du rôle d'un utilisateur donné par son ID.
+     * Retourne 0 si l'utilisateur ou son rôle est introuvable.
+     */
+    public function roleRank(int $userId): int
+    {
+        $row = $this->queryOne(
+            'SELECT r.role_name
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE u.id = :id',
+            [':id' => $userId]
+        );
+
+        if (!$row) {
+            return 0;
+        }
+
+        return self::ROLE_RANK[$row['role_name']] ?? 0;
+    }
+
+    /**
+     * Vérifie si $actorId a le droit d'agir (modifier/désactiver/supprimer)
+     * sur $targetId. Un utilisateur ne peut agir que sur un compte de rang
+     * strictement inférieur au sien. Agir sur soi-même est toujours refusé
+     * par cette méthode — les controllers gèrent ce cas séparément
+     * (ex: "vous ne pouvez pas vous supprimer vous-même").
+     *
+     * Exemple : un admin (rang 3) peut agir sur un technicien (rang 2)
+     * mais pas sur un autre admin (rang 3) ni sur un super_admin (rang 4).
+     */
+    public function canActOn(int $actorId, int $targetId): bool
+    {
+        if ($actorId === $targetId) {
+            return false;
+        }
+
+        return $this->roleRank($actorId) > $this->roleRank($targetId);
+    }
+
+    /**
+     * Rang numérique d'un rôle à partir de son nom directement
+     * (utile quand on a déjà le role_name en session, sans requête).
+     */
+    public function roleRankByName(string $roleName): int
+    {
+        return self::ROLE_RANK[$roleName] ?? 0;
+    }
+
+    /**
+     * Retourne uniquement les rôles qu'un acteur a le droit d'attribuer
+     * à un autre compte (création ou changement de rôle).
+     *
+     * Règle : un acteur ne peut attribuer que des rôles de rang
+     * STRICTEMENT inférieur au sien. Un admin (rang 3) ne peut donc
+     * jamais attribuer 'admin' ou 'super_admin' — uniquement technicien,
+     * utilisateur ou auditeur. Un super_admin peut attribuer tous les rôles.
+     */
+    public function assignableRoles(int $actorRoleRank): array
+    {
+        $all = $this->allRoles();
+
+        return array_values(array_filter(
+            $all,
+            fn($role) => $this->roleRankByName($role['role_name']) < $actorRoleRank
+        ));
+    }
+
 }

@@ -31,6 +31,16 @@
         .sidebar-brand {
             background-color: var(--nexora-sidebar-bg);
             border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-brand .brand-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
         }
 
         .brand-text {
@@ -225,7 +235,7 @@
 
                     <!-- Appareils -->
                     <li class="nav-item <?= active('/devices') ? 'menu-open' : '' ?>">
-                        <a href="<?= url('/devices') ?>"
+                        <a href="#"
                            class="nav-link <?= active('/devices') ?>">
                             <i class="bi bi-hdd-network"></i>
                             <p>
@@ -351,25 +361,6 @@
                         </a>
                     </li>
                     <?php endif; ?>
-
-                    <!-- ---- COMPTE ---- -->
-                    <li class="nav-header">Compte</li>
-
-                    <li class="nav-item">
-                        <a href="<?= url('/profile') ?>"
-                           class="nav-link <?= active('/profile') ?>">
-                            <i class="bi bi-person-circle"></i>
-                            <p>Mon profil</p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="<?= url('/auth/logout') ?>" class="nav-link text-danger">
-                            <i class="bi bi-box-arrow-right"></i>
-                            <p>Déconnexion</p>
-                        </a>
-                    </li>
-
                 </ul>
             </nav>
         </div>
@@ -453,7 +444,7 @@
                         ?>
 
                         <?php if ($avatar): ?>
-                            <img src="<?= e($avatar) ?>" alt="avatar" class="user-avatar">
+                            <img src="<?= url($avatar) ?>" alt="avatar" class="user-avatar">
                         <?php else: ?>
                             <div class="user-avatar"><?= e($initials) ?></div>
                         <?php endif; ?>
@@ -567,6 +558,9 @@
 <!-- /.app-wrapper -->
 
 
+<!-- Bootstrap 5 JS (Popper + dropdowns) — requis car AdminLTE n'embarque pas ce JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- AdminLTE v4 JS (toggle sidebar, treeview…) -->
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/js/adminlte.min.js"></script>
 
 <script>

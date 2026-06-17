@@ -1,0 +1,4 @@
+# Empêche tout accès web direct à ce dossier.
+# Ce script doit UNIQUEMENT être exécuté en ligne de commande
+# (cron Linux ou planificateur de tâches Windows), jamais via une URL.
+Require all denied

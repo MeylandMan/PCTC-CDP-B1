@@ -4,7 +4,7 @@ require_once ROOT_PATH . '/core/controller.php';
 require_once ROOT_PATH . '/app/models/user-model.php';
 
 // PHPMailer — à installer via Composer ou en téléchargeant les sources
-// require_once ROOT_PATH . '/vendor/autoload.php';
+require_once ROOT_PATH . '/vendor/autoload.php';
 
 class AuthController extends Controller
 {
@@ -361,17 +361,16 @@ class AuthController extends Controller
         // Pour les tests locaux, on logue le code dans error_log
         error_log("[AUTH] OTP pour {$to} : {$otp}");
 
-        /*
         $mail = new PHPMailer\PHPMailer\PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host       = getenv('SMTP_HOST');
+        $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = getenv('SMTP_USER');
-        $mail->Password   = getenv('SMTP_PASS');
+        $mail->Username   = 'm.dunooman0@gmail.com';
+        $mail->Password   = 'bnwp hnvb qilu ncht';
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
-        $mail->setFrom(getenv('MAIL_FROM'), 'NetWatch Monitoring');
+        $mail->setFrom('m.dunooman0@gmail.com', 'NetWatch Monitoring');
         $mail->addAddress($to, $firstname);
         $mail->isHTML(true);
         $mail->Subject = 'Votre code de vérification';
@@ -379,19 +378,28 @@ class AuthController extends Controller
                           <p>Votre code de vérification est : <strong>{$otp}</strong></p>
                           <p>Il expire dans 10 minutes.</p>";
         $mail->send();
-        */
     }
 
     private function sendResetEmail(string $to, string $firstname, string $link): void
     {
         error_log("[AUTH] Lien reset pour {$to} : {$link}");
 
-        /*
-        // Même configuration PHPMailer que sendOtpEmail()
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = smtp.gmail.com;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'm.dunooman0@gmail.com';
+        $mail->Password   = 'bnwp hnvb qilu ncht';
+        $mail->SMTPSecure = 'tls';
+        $mail->Port       = 587;
+        $mail->CharSet    = 'UTF-8';
+        $mail->setFrom(getenv('MAIL_FROM'), 'NetWatch Monitoring');
+        $mail->addAddress($to, $firstname);
+        $mail->isHTML(true);
         $mail->Subject = 'Réinitialisation de votre mot de passe';
         $mail->Body    = "<p>Bonjour {$firstname},</p>
                           <p><a href='{$link}'>Cliquez ici</a> pour réinitialiser votre mot de passe.</p>
                           <p>Ce lien expire dans 15 minutes.</p>";
-        */
+        $mail->send();
     }
 }

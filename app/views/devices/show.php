@@ -170,18 +170,35 @@
 
 <!-- Graphique historique métriques -->
 <div class="card mb-3">
-    <div class="card-header d-flex align-items-center justify-content-between">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h6 class="card-title mb-0 fw-semibold">
-            <i class="bi bi-graph-up me-2 text-primary"></i>Historique des métriques (30 dernières collectes)
+            <i class="bi bi-graph-up me-2 text-primary"></i>Historique des métriques
         </h6>
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-secondary" id="refreshMetrics">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small" id="metricsUpdatedAt"></span>
+
+            <!-- Sélecteur de plage -->
+            <select class="form-select form-select-sm" id="metricsRange" style="width:auto;">
+                <option value="30">30 dernières collectes</option>
+                <option value="60">60 dernières collectes</option>
+            </select>
+
+            <button class="btn btn-sm btn-outline-secondary" id="refreshMetrics" title="Rafraîchir">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
+
+            <a href="<?= url('/metrics/device/' . $device['id']) ?>"
+               class="btn btn-sm btn-outline-primary" title="Vue détaillée et moyennes horaires">
+                <i class="bi bi-bar-chart-line me-1"></i>Vue détaillée
+            </a>
         </div>
     </div>
     <div class="card-body">
         <canvas id="chartMetrics" height="90"></canvas>
+        <p class="text-muted small text-center mt-2 mb-0" id="noMetricsMsg" style="display:none;">
+            Aucune métrique disponible pour le moment. Le moteur de monitoring
+            (<code>cron/monitor.php</code>) doit être en cours d'exécution pour collecter des données.
+        </p>
     </div>
 </div>
 
@@ -272,14 +289,32 @@
      Scripts
 ====================================================================== -->
 <script>
-(function () {
-    const deviceId   = <?= (int)$device['id'] ?>;
+document.addEventListener('DOMContentLoaded', function () {
+    const deviceId    = <?= (int)$device['id'] ?>;
     const initialData = <?= $chartMetrics ?>;
 
     // ------------------------------------------------------------------
     // Graphique historique
     // ------------------------------------------------------------------
-    const ctx = document.getElementById('chartMetrics').getContext('2d');
+    const canvas       = document.getElementById('chartMetrics');
+    const noMetricsMsg = document.getElementById('noMetricsMsg');
+    const updatedAtEl  = document.getElementById('metricsUpdatedAt');
+    const ctx          = canvas.getContext('2d');
+
+    function toggleEmptyState(hasData) {
+        canvas.style.display       = hasData ? '' : 'none';
+        noMetricsMsg.style.display = hasData ? 'none' : '';
+    }
+
+    function setUpdatedAt() {
+        const now = new Date();
+        updatedAtEl.textContent = 'Mis à jour à ' +
+            now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    toggleEmptyState(initialData.labels.length > 0);
+    setUpdatedAt();
+
     const chart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -325,18 +360,22 @@
         },
     });
 
-    // Rafraîchissement du graphique
+    // Rafraîchissement du graphique — tient compte de la plage sélectionnée
     function refreshChart() {
-        fetch(`<?= url('/devices/') ?>${deviceId}/metrics?limit=30`, {
+        const limit = document.getElementById('metricsRange').value;
+
+        fetch(`<?= url('/devices/') ?>${deviceId}/metrics?limit=${limit}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())
         .then(d => {
-            chart.data.labels       = d.labels;
+            toggleEmptyState(d.labels.length > 0);
+            chart.data.labels           = d.labels;
             chart.data.datasets[0].data = d.cpu;
             chart.data.datasets[1].data = d.ram;
             chart.data.datasets[2].data = d.disk;
             chart.update('none');
+            setUpdatedAt();
         })
         .catch(() => {});
     }
@@ -344,12 +383,15 @@
     document.getElementById('refreshMetrics')
         .addEventListener('click', refreshChart);
 
+    document.getElementById('metricsRange')
+        .addEventListener('change', refreshChart);
+
     setInterval(refreshChart, 30_000);
 
     // ------------------------------------------------------------------
     // Ping
     // ------------------------------------------------------------------
-    function pingDevice(id) {
+    window.pingDevice = function (id) {
         const btn = document.getElementById('pingBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ping…';
@@ -369,14 +411,16 @@
 
             const icon = data.alive ? '✅' : '❌';
             alert(icon + ' ' + data.message);
+
+            // Rafraîchit aussi le graphique : un ping met à jour le statut
+            // de l'appareil, ce qui peut affecter l'affichage des données.
+            refreshChart();
         })
         .catch(() => {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-wifi me-1"></i>Ping';
             alert('Erreur lors du ping.');
         });
-    }
-
-    window.pingDevice = pingDevice;
-})();
+    };
+});
 </script>
